@@ -12,7 +12,6 @@ using namespace std;
 using namespace cv;
 using namespace cv::xfeatures2d;
 
-
 bool is_near(Point2f, Point2f, int, int);
 vector<vector<DMatch>> split_objects(vector<DMatch>, vector<KeyPoint>, int, int, int);
 Mat homography(vector<DMatch>, vector<DMatch>, vector<KeyPoint>);
@@ -26,9 +25,9 @@ vector<vector<DMatch>> Homography(vector<DMatch>,vector<KeyPoint>);
 int main()
 {
     //            PFAD, ANZAHL KEYPOINTS, MAXDISTANCE, LIMITX, LIMITY, DARSTELLUNG
-    String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/board.jpg";
+    String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/fliesen.jpeg";
     int minHessian = 400; int anzahl = 3; int distance = 100; int limitx = 50; int limity = 50;
-    testalg(PATH,minHessian,5);
+    testalg(PATH,minHessian,4);
     //algorithmus(PATH,minHessian,anzahl,distance,limitx,limity);
     return 0;
 }
@@ -303,8 +302,7 @@ bool contains(vector<Point2f> vp, Point2f p2f)
     return contain;
 }
 
-
-vector<vector<DMatch>> Homography(vector<DMatch> good_matches,vector<KeyPoint> keys1)
+vector<vector<DMatch>> Homography(vector<DMatch> good_matches,vector<KeyPoint> keys1, Mat* IMG1, Mat* IMG_TRANS)
 {
     vector<Point2f> queryPoints, trainPoints;
     vector<DMatch>::iterator it = good_matches.begin();
@@ -330,6 +328,22 @@ vector<vector<DMatch>> Homography(vector<DMatch> good_matches,vector<KeyPoint> k
         }
     }
 
+    vector<Point2f> points, trans_points;
+
+    for(DMatch m : good_matches)
+    {
+        points.push_back(keys1[m.queryIdx].pt);
+    }
+
+    perspectiveTransform(points,trans_points,H);
+
+    for(int i = 0; i<points.size();i++){
+        Point2f p_org = points.at(i); cout << p_org.x << " " << p_org.y << endl;
+        Point2f p_trans = trans_points.at(i); cout << p_trans.x << " " << p_trans.y << endl << endl;
+        if(!(p_org.x < 0 || p_org.y < 0 || p_trans.x < 0 || p_trans.y <0))
+        IMG_TRANS->at<uchar>(p_trans.x,p_trans.y) = IMG1->at<uchar>(p_org.x,p_org.y);
+    }
+
     vector<vector<DMatch>> returnvalue;
     returnvalue.push_back(match);
     returnvalue.push_back(rest);
@@ -338,14 +352,13 @@ vector<vector<DMatch>> Homography(vector<DMatch> good_matches,vector<KeyPoint> k
     return returnvalue;
 }
 
-
 void testalg(String PATH, int Hessian, int anzahl)
 {
     String path = PATH;
     int minHessian = Hessian;
 
-    Mat img_1 = imread(path);
-    Mat img_2 = imread(path);
+    Mat img_1 = imread(path,CV_32FC3);
+    Mat img_2 = imread(path,CV_32FC3);
     Ptr<SIFT> detector = SIFT::create(minHessian);
 
     Mat mask = Mat::ones(img_1.size(),CV_8U);
@@ -361,32 +374,59 @@ void testalg(String PATH, int Hessian, int anzahl)
     matcher.knnMatch(desc1,desc2,matches,anzahlMatches);
 
     vector<DMatch> good_matches;
-    for (int k = 0; k < desc1.rows; ++k) {
-        for (int i = 0; i < anzahlMatches; ++i) {
-            if(!isEqual(matches[k][i],keys1))
-                good_matches.push_back(matches[k][i]);
+    vector<DMatch> filtered_matches;
+    //find min distanz die nicht 0 ist
+
+    double min = 1000;
+    for(int i = 0; i < desc1.rows; i++){
+        for(int j = 0; j < anzahlMatches; j++){
+            if(matches[i][j].distance<min && matches[i][j].distance!=0)
+                min = matches[i][j].distance;
         }
     }
+
+    for(int i = 0; i < desc1.rows; i++){
+        for(int j = 0; j < anzahlMatches; j++){
+            if(matches[i][j].distance <= 3*min)
+                good_matches.push_back(matches[i][j]);
+        }
+    }
+
+    for(DMatch m : good_matches){
+        if(!isEqual(m,keys1))
+            filtered_matches.push_back(m);
+    }
+
+
     Mat img_matches;
     Mat img_matches2;
-    vector<vector<DMatch>> split = Homography(good_matches,keys1);
+    Mat img_trans = Mat::zeros(img_1.size(),img_1.type());
+    vector<vector<DMatch>> split = Homography(filtered_matches,keys1,&img_1, &img_2);
 
-    drawMatches(img_1,keys1,img_2,keys2,split[0],img_matches);
-    imshow("Matches",img_matches);
-    waitKey(0);
+    //drawMatches(img_1,keys1,img_2,keys2,split[0],img_matches);
+    //imshow("Matches",img_matches);
+    //waitKey(0);
 
-    drawMatches(img_1,keys1,img_2,keys2,split[1],img_matches2);
-    imshow("Rest",img_matches2);
-    waitKey(0);
+    //drawMatches(img_1,keys1,img_2,keys2,split[1],img_matches2);
+    //imshow("Rest",img_matches2);
+    //waitKey(0);
 
     do{
-        split = Homography(split[1],keys1);
-        drawMatches(img_1,keys1,img_2,keys2,split[0],img_matches);
-        imshow("Matches",img_matches);
-        waitKey(0);
+        split = Homography(split[1],keys1,&img_1, &img_2);
+        //drawMatches(img_1,keys1,img_2,keys2,split[0],img_matches);
+        //imshow("Matches",img_matches);
+        //waitKey(0);
 
-        drawMatches(img_1,keys1,img_2,keys2,split[1],img_matches2);
-        imshow("Rest",img_matches2);
-        waitKey(0);
-    }while(split[1].begin()!=split[1].end()&&split[1].size()>1);
+        //drawMatches(img_1,keys1,img_2,keys2,split[1],img_matches2);
+        //imshow("Rest",img_matches2);
+        //waitKey(0);
+    }while(split[1].begin()!=split[1].end()&&split[1].size()>3);
+
+    Mat diff_img;
+    absdiff(img_1,img_2,diff_img);
+
+
+    imshow("Bild2",img_2);
+    imshow("Transimg",diff_img);
+    waitKey(0);
 }
