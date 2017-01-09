@@ -25,7 +25,7 @@ vector<vector<DMatch>> Homography(vector<DMatch>,vector<KeyPoint>);
 int main()
 {
     //            PFAD, ANZAHL KEYPOINTS, MAXDISTANCE, LIMITX, LIMITY, DARSTELLUNG
-    String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/board.jpg";
+    String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/hauswand.jpg";
     int minHessian = 400; int anzahl = 3; int distance = 100; int limitx = 50; int limity = 50;
     testalg(PATH,minHessian,4);
     //algorithmus(PATH,minHessian,anzahl,distance,limitx,limity);
@@ -341,7 +341,7 @@ vector<vector<DMatch>> Homography(vector<DMatch> good_matches,vector<KeyPoint> k
         Point2f p_org = points.at(i); cout << p_org.x << " " << p_org.y << endl;
         Point2f p_trans = trans_points.at(i); cout << p_trans.x << " " << p_trans.y << endl << endl;
         if(!(p_org.x < 0 || p_org.y < 0 || p_trans.x < 0 || p_trans.y <0))
-        IMG_TRANS->at<uchar>(p_trans.x,p_trans.y) = IMG1->at<uchar>(p_org.x,p_org.y);
+        IMG_TRANS->at<Vec3b>(p_trans.x,p_trans.y) = IMG1->at<Vec3b>(p_org.x,p_org.y);
     }
 
     vector<vector<DMatch>> returnvalue;
@@ -357,8 +357,8 @@ void testalg(String PATH, int Hessian, int anzahl)
     String path = PATH;
     int minHessian = Hessian;
 
-    Mat img_1 = imread(path,CV_32FC3);
-    Mat img_2 = imread(path,CV_32FC3);
+    Mat img_1 = imread(path,CV_8UC3);
+    Mat img_2 = imread(path,CV_8UC3);
     Ptr<SIFT> detector = SIFT::create(minHessian);
 
     Mat mask = Mat::ones(img_1.size(),CV_8U);
@@ -413,16 +413,18 @@ void testalg(String PATH, int Hessian, int anzahl)
 
     do{
         split = Homography(split[1],keys1,&img_1, &img_2);
-        //drawMatches(img_1,keys1,img_2,keys2,split[0],img_matches);
-        //imshow("Matches",img_matches);
-        //waitKey(0);
+        drawMatches(img_1,keys1,img_2,keys2,split[0],img_matches);
+        imshow("Matches",img_matches);
+        waitKey(0);
 
-        //drawMatches(img_1,keys1,img_2,keys2,split[1],img_matches2);
-        //imshow("Rest",img_matches2);
-        //waitKey(0);
+        drawMatches(img_1,keys1,img_2,keys2,split[1],img_matches2);
+        imshow("Rest",img_matches2);
+        waitKey(0);
     }while(split[1].begin()!=split[1].end()&&split[1].size()>3);
 
     Mat diff_img;
+    imshow("Bild2",img_2);
+    imshow("Bild1",img_1);
     absdiff(img_1,img_2,diff_img);
 
 
