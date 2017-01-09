@@ -25,7 +25,7 @@ vector<vector<DMatch>> Homography(vector<DMatch>,vector<KeyPoint>);
 int main()
 {
     //            PFAD, ANZAHL KEYPOINTS, MAXDISTANCE, LIMITX, LIMITY, DARSTELLUNG
-    String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/fliesen.jpeg";
+    String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/board.jpg";
     int minHessian = 400; int anzahl = 3; int distance = 100; int limitx = 50; int limity = 50;
     testalg(PATH,minHessian,4);
     //algorithmus(PATH,minHessian,anzahl,distance,limitx,limity);
