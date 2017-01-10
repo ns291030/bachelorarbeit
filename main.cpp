@@ -25,7 +25,7 @@ vector<vector<DMatch>> Homography(vector<DMatch>,vector<KeyPoint>);
 int main()
 {
     //            PFAD, ANZAHL KEYPOINTS, MAXDISTANCE, LIMITX, LIMITY, DARSTELLUNG
-    String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/hauswand.jpg";
+    String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/fliesen.jpeg";
     int minHessian = 400; int anzahl = 3; int distance = 100; int limitx = 50; int limity = 50;
     testalg(PATH,minHessian,4);
     //algorithmus(PATH,minHessian,anzahl,distance,limitx,limity);
@@ -335,14 +335,20 @@ vector<vector<DMatch>> Homography(vector<DMatch> good_matches,vector<KeyPoint> k
         points.push_back(keys1[m.queryIdx].pt);
     }
 
-    perspectiveTransform(points,trans_points,H);
 
-    for(int i = 0; i<points.size();i++){
-        Point2f p_org = points.at(i); cout << p_org.x << " " << p_org.y << endl;
-        Point2f p_trans = trans_points.at(i); cout << p_trans.x << " " << p_trans.y << endl << endl;
-        if(!(p_org.x < 0 || p_org.y < 0 || p_trans.x < 0 || p_trans.y <0))
-        IMG_TRANS->at<Vec3b>(p_trans.x,p_trans.y) = IMG1->at<Vec3b>(p_org.x,p_org.y);
+    if(points.size()!=0)
+    {
+        perspectiveTransform(points,trans_points,H);
+        cout << points.size() << " " << trans_points.size() << endl;
+
+        for(int i = 0; i<points.size();i++){
+            Point2f p_org = points.at(i); //cout << p_org.x << " " << p_org.y << endl;
+            Point2f p_trans = trans_points.at(i); //cout << p_trans.x << " " << p_trans.y << endl << endl;
+            if(!(p_org.x < 0 || p_org.y < 0 || p_trans.x < 0 || p_trans.y <0))
+                IMG_TRANS->at<Vec3b>(p_trans.y,p_trans.x) = IMG1->at<Vec3b>(p_org.y,p_org.x);
+        }
     }
+
 
     vector<vector<DMatch>> returnvalue;
     returnvalue.push_back(match);
@@ -357,8 +363,8 @@ void testalg(String PATH, int Hessian, int anzahl)
     String path = PATH;
     int minHessian = Hessian;
 
-    Mat img_1 = imread(path,CV_8UC3);
-    Mat img_2 = imread(path,CV_8UC3);
+    Mat img_1 = imread(path);
+    Mat img_2 = imread(path);
     Ptr<SIFT> detector = SIFT::create(minHessian);
 
     Mat mask = Mat::ones(img_1.size(),CV_8U);
