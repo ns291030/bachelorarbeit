@@ -363,64 +363,6 @@ vector<vector<DMatch>> Homography(vector<DMatch> good_matches,vector<KeyPoint> k
     return returnvalue;
 }
 
-//Mat Homography(vector<DMatch> good_matches, Mat maskinliers, vector<KeyPoint> keys1, Mat* IMG1, Mat* IMG_TRANS)
-//// returns the inliers mask of the homography
-//{
-//    vector<Point2f> queryPoints, trainPoints;
-//    vector<DMatch>::iterator it = good_matches.begin();
-//    while(it!=good_matches.end())
-//    {
-//        if(!contains(queryPoints,keys1[it->queryIdx].pt)){
-//            queryPoints.push_back(keys1[it->queryIdx].pt);
-//            trainPoints.push_back(keys1[it->trainIdx].pt);
-//        }
-//        it++;
-//    }
-//    Mat maskinliers;
-//    Mat H = findHomography(queryPoints,trainPoints,CV_RANSAC,10,maskinliers,3000,0.995);
-//    cout << H << endl;
-
-//    vector<DMatch> match, rest;
-//    for(int i = 0; i<maskinliers.rows; i++)
-//    {
-//        DMatch d = good_matches.at(i);
-//        if((unsigned int)maskinliers.at<uchar>(i)){
-//            match.push_back(d);
-//        }else{
-//            rest.push_back(d);
-//        }
-//    }
-
-//    vector<Point2f> points, trans_points;
-
-//    for(DMatch m : good_matches)
-//    {
-//        points.push_back(keys1[m.queryIdx].pt);
-//    }
-
-
-//    if(points.size()!=0)
-//    {
-//        perspectiveTransform(points,trans_points,H);
-//        cout << points.size() << " " << trans_points.size() << endl;
-
-//        for(int i = 0; i<points.size();i++){
-//            Point2f p_org = points.at(i); //cout << p_org.x << " " << p_org.y << endl;
-//            Point2f p_trans = trans_points.at(i); //cout << p_trans.x << " " << p_trans.y << endl << endl;
-//            if(!(p_org.x < 0 || p_org.y < 0 || p_trans.x < 0 || p_trans.y <0))
-//                IMG_TRANS->at<Vec3b>(p_trans.y,p_trans.x) = IMG1->at<Vec3b>(p_org.y,p_org.x);
-//        }
-//    }
-
-
-//    vector<vector<DMatch>> returnvalue;
-//    returnvalue.push_back(match);
-//    returnvalue.push_back(rest);
-
-
-//    return returnvalue;
-//}
-
 
 void testalg(String PATH, int Hessian, int anzahl)
 {
