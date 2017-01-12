@@ -190,7 +190,7 @@ void testalg(String PATH, int Hessian, int anzahl)
     for(int i = 0; i < desc1.rows; i++){
         for(int j = 0; j < anzahlMatches; j++){
             if(matches[i][j].distance <= 3*min)
-            good_matches.push_back(matches[i][j]);
+                good_matches.push_back(matches[i][j]);
         }
     }
 
