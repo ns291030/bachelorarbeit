@@ -16,10 +16,18 @@ bool isEqual(DMatch,vector<KeyPoint>);
 void testalg(String, int, int);
 vector<vector<DMatch>> Homography(vector<DMatch>,vector<KeyPoint>);
 
+
 int main() {
     //            PFAD, ANZAHL KEYPOINTS, MAXDISTANCE, LIMITX, LIMITY, DARSTELLUNG
     //String PATH = "zuckerUndTee3.jpg";
-    String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/fliesen.jpeg";
+    //String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/board3.jpg";
+    //String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/testframes/BigShips.png";
+    //String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/testframes/City.png";
+    String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/testframes/GT_Fly.png";
+    //String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/testframes/Kimono.png";
+    //String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/testframes/ParkScene.png";
+    //String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/testframes/Poznan_Street.png";
+    //String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/testframes/Traffic.png";
     int minHessian = 400;
     int anzahl = 3;
     testalg(PATH, minHessian, anzahl);
@@ -33,6 +41,7 @@ double getPSNR(const Mat& I1,const Mat& I2)
     diff.convertTo(diff,CV_32F);
 
     diff = diff.mul(diff);
+
     Scalar s = sum(diff);
     double d = s.val[0] + s.val[1] + s.val[2];
 
@@ -69,10 +78,6 @@ vector<vector<DMatch>> Homography(vector<DMatch> good_matches,vector<KeyPoint> k
     }
     Mat maskinliers;
     Mat H = findHomography(queryPoints,trainPoints,CV_RANSAC,10,maskinliers,3000,0.995);
-    //cout << H << endl;
-    //cout << maskinliers.type() << endl;
-    //cout << maskinliers.channels() << endl;
-
 
     vector<DMatch> match, rest;
     for(int i = 0; i<maskinliers.rows; i++)
@@ -87,7 +92,7 @@ vector<vector<DMatch>> Homography(vector<DMatch> good_matches,vector<KeyPoint> k
 
     vector<Point2f> points, trans_points;
 
-    for(DMatch m : good_matches)
+    for(DMatch m : match)
     {
         points.push_back(keys1[m.queryIdx].pt);
     }
@@ -95,23 +100,29 @@ vector<vector<DMatch>> Homography(vector<DMatch> good_matches,vector<KeyPoint> k
 
     if(H.cols!=0&&H.rows!=0)
     {
-        perspectiveTransform(points,trans_points,H);
-        //cout << points.size() << " " << trans_points.size() << endl;
-
-        for(int i = 0; i<points.size();i++){
-            Point2f p_org = points.at(i); //cout << p_org.x << " " << p_org.y << endl;
-            Point2f p_trans = trans_points.at(i); //cout << p_trans.x << " " << p_trans.y << endl << endl;
-            if(!(p_org.x < 0 || p_org.y < 0 || p_trans.x < 0 || p_trans.y <0)){
-                IMG_TRANS->at<Vec3b>(p_trans.y,p_trans.x) = IMG1->at<Vec3b>(p_org.y,p_org.x);
-            }
-        }
-
+        cout << "Matches: " << match.size() << endl << "Rest: " << rest.size() << endl;
+        //Möglichkeit 1: Bei den Karten ok Ergebnis, bei dem Schiff zum Beispiel kein Ergebnis
+        /*Mat warped;
+        warpPerspective(*IMG1,warped,H,IMG1->size());
         Mat diff;
-        cout << "PSNR: " << getPSNR(*IMG1,*IMG_TRANS) << endl;
-        absdiff(*IMG1,*IMG_TRANS,diff);
-        namedWindow("Diff_per_Homographie", CV_WINDOW_KEEPRATIO);
-        resizeWindow("Diff_per_Homographie", 800, 800);
-        imshow("Diff_per_Homographie",diff);
+        absdiff(warped,*IMG1,diff);
+        namedWindow("Differenz", CV_WINDOW_KEEPRATIO);
+        resizeWindow("Differenz", 800, 800);
+        imshow("Differenz",diff);
+        cout << "PSNR: " << getPSNR(warped,*IMG1) << endl;*/
+
+        //Möglichkeit 2:
+
+        vector<Point2f> hull;
+        Mat hull_img=IMG1->clone();
+        convexHull(points,hull);
+        for(int i = 0; i<hull.size();i++)
+            line(hull_img,hull[i],hull[(i+1)%hull.size()],Scalar(255,255,255));
+
+        namedWindow("Hull", CV_WINDOW_KEEPRATIO);
+        resizeWindow("Hull", 800, 800);
+        imshow("Hull",hull_img);
+
 
     }else{
         rest.clear();
@@ -137,7 +148,6 @@ void testalg(String PATH, int Hessian, int anzahl)
     Mat img_1 = imread(path);
     Mat img_2 = imread(path);
     Ptr<SIFT> detector = SIFT::create();
-//    Ptr<SURF> detector = SURF::create( minHessian );
 
     Mat mask = Mat::ones(img_1.size(),CV_8U);
     vector<KeyPoint> keys1, keys2;
@@ -146,32 +156,20 @@ void testalg(String PATH, int Hessian, int anzahl)
     detector->detectAndCompute(img_1,mask,keys1,desc1);
     detector->detectAndCompute(img_2,mask,keys2,desc2);
 
-    Mat img_keyPts;
-    drawKeypoints(img_1, keys1,img_keyPts ,Scalar(0,0,255), 4);
-    namedWindow("Keypoints", CV_WINDOW_KEEPRATIO);
-    resizeWindow("Keypoints", 800, 800);
-    imshow("Keypoints",img_keyPts);
-    waitKey(0);
+    //Mat img_keyPts;
+    //drawKeypoints(img_1, keys1,img_keyPts ,Scalar(0,0,255), 4);
+    //namedWindow("Keypoints", CV_WINDOW_KEEPRATIO);
+    //resizeWindow("Keypoints", 800, 800);
+    //imshow("Keypoints",img_keyPts);
+    //waitKey(0);
 
 
     FlannBasedMatcher matcher;
     vector<vector<DMatch>> matches;
     int anzahlMatches = anzahl;
     matcher.knnMatch(desc1,desc2,matches,anzahlMatches);
-
-
-
-    Mat img_orig_matches;
-    drawMatches(img_1,keys1,img_2,keys2,matches,img_orig_matches );
-    namedWindow("OrigMatches", CV_WINDOW_KEEPRATIO);
-    resizeWindow("OrigMatches", 800, 800);
-    imshow("OrigMatches",img_orig_matches);
-    waitKey(0);
-
-
     vector<DMatch> good_matches;
     vector<DMatch> filtered_matches;
-    //find min distanz die nicht 0 ist
 
     double min = 1000;
     double max = 0;
@@ -184,9 +182,6 @@ void testalg(String PATH, int Hessian, int anzahl)
                 max = matches[i][j].distance;
         }
     }
-    //cout << "Min: " << min << endl;
-    //cout << "Max: " << max << endl;
-
     for(int i = 0; i < desc1.rows; i++){
         for(int j = 0; j < anzahlMatches; j++){
             if(matches[i][j].distance <= 3*min)
@@ -199,15 +194,11 @@ void testalg(String PATH, int Hessian, int anzahl)
             filtered_matches.push_back(m);
     }
 
-    Mat img_filtered_matches;
-    drawMatches(img_1,keys1,img_2,keys2,filtered_matches,img_filtered_matches );
-    namedWindow("ReducedMatches", CV_WINDOW_KEEPRATIO);
-    resizeWindow("ReducedMatches", 800, 800);
-    imshow("ReducedMatches",img_filtered_matches);
-    waitKey(0);
-
     Mat img_trans = Mat::zeros(img_1.size(),img_1.type());
-    vector<vector<DMatch>> split = Homography(filtered_matches,keys1,&img_1, &img_2);
+    vector<vector<DMatch>> split;
+    vector<DMatch> empty;
+    split.push_back(empty);
+    split.push_back(filtered_matches);
 
     do{
         Mat img_matches;
@@ -226,13 +217,7 @@ void testalg(String PATH, int Hessian, int anzahl)
         waitKey(0);
     }while(split[1].begin()!=split[1].end()&&split[1].size()>4);
 
-    Mat diff_img;
-    imshow("Bild2",img_2);
-    imshow("Bild1",img_1);
-    absdiff(img_1,img_2,diff_img);
-
-
-    imshow("Bild2",img_2);
-    imshow("Transimg",diff_img);
     waitKey(0);
 }
+
+
