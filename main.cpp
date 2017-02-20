@@ -1,12 +1,11 @@
 #include <stdio.h>
 #include <iostream>
 
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/xfeatures2d/nonfree.hpp>
 #include <opencv/cv.hpp>
-
-#define epsilon 0.1
 
 using namespace std;
 using namespace cv;
@@ -20,7 +19,7 @@ vector<vector<DMatch>> Homography(vector<DMatch>,vector<KeyPoint>);
 int main() {
     //            PFAD, ANZAHL KEYPOINTS, MAXDISTANCE, LIMITX, LIMITY, DARSTELLUNG
     //String PATH = "zuckerUndTee3.jpg";
-    //String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/board3.jpg";
+    //String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/fliesen.jpeg";
     //String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/testframes/BigShips.png";
     //String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/testframes/City.png";
     //String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/testframes/GT_Fly.png";
@@ -28,30 +27,29 @@ int main() {
     //String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/testframes/ParkScene.png";
     //String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/testframes/Poznan_Street.png";
     //String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/testframes/Traffic.png";
-
     String PATH = "/home/nikolaj/Bilder/bachelorarbeittest/newTestset/IMG_9812.JPG";
     int minHessian = 400;
-    int anzahl = 3;
+    int anzahl = 5;
     testalg(PATH, minHessian, anzahl, true);
     return 0;
 }
 
-double getPSNR(const Mat& I1,const Mat& I2)
+double getPSNR(const Mat& I1)
 {
-    Mat diff;
-    absdiff(I1,I2,diff);
-    diff.convertTo(diff,CV_32F);
-
+    Mat diff = I1.clone();
+    Mat q = I1.clone();
     diff = diff.mul(diff);
 
     Scalar s = sum(diff);
     double d = s.val[0] + s.val[1] + s.val[2];
 
+
+
     if(d <= 1e-10){
         return 0;
     }else{
         double mse = d/(double)(I1.channels()*I1.total());
-        double psnr = 10.0+log10((255*255)/mse);
+        double psnr = 10.0*log10((255*255)/mse);
         return psnr;
     }
 }
@@ -92,7 +90,7 @@ vector<vector<DMatch>> Homography(vector<DMatch> good_matches,vector<KeyPoint> k
         }
     }
 
-    vector<Point2f> points, trans_points;
+    vector<Point2f> points;
 
     for(DMatch m : match)
     {
@@ -102,35 +100,19 @@ vector<vector<DMatch>> Homography(vector<DMatch> good_matches,vector<KeyPoint> k
 
     if(H.cols!=0&&H.rows!=0)
     {
-        cout << "Matches: " << match.size() << endl << "Rest: " << rest.size() << endl;
-        //Möglichkeit 1: Bei den Karten ok Ergebnis, bei dem Schiff zum Beispiel kein Ergebnis
         Mat warped;
         warpPerspective(*IMG1,warped,H,IMG1->size());
         Mat diff;
         absdiff(warped,*IMG1,diff);
-
-
-        //Möglichkeit 2:
-
         vector<Point2f> hull;
-        //Mat hull_img=IMG1->clone();
-
-        //
-        // Mat mask_image(IMG1->size(),CV_8U,Scalar(0));
+        Mat hull_img=IMG1->clone();
         convexHull(points,hull);
+        for(int i = 0; i<hull.size();i++)
+            line(hull_img,hull[i],hull[(i+1)%hull.size()],Scalar(255,255,255),5);
         vector<Point2f> hull_transformed;
         perspectiveTransform(hull,hull_transformed,H);
 
-        cout << hull_transformed.size() << endl;
-
-        //fillConvexPoly(mask_image,hull,Scalar(255));
-
-        //Mat test;
-        //test.copyTo(*IMG1,mask_image);
-
-
         float min_x = 10000, min_y = 10000, max_x = 0, max_y = 0;
-
         for(int i = 0; i<hull_transformed.size();i++)
         {
             if(hull_transformed[i].x<min_x)
@@ -142,24 +124,15 @@ vector<vector<DMatch>> Homography(vector<DMatch> good_matches,vector<KeyPoint> k
             if(hull_transformed[i].y>max_y)
                 max_y=hull_transformed[i].y;
         }
+        if(min_x < 0) min_x = 0;
+        if(min_y < 0) min_y = 0;
+        if(max_x > diff.size().width) max_x = diff.size().width;
+        if(max_y > diff.size().height) max_y = diff.size().height;
 
         Rect region_of_interest = Rect(min_x,min_y,(max_x-min_x),(max_y-min_y));
-        Mat img_roi_warped = warped(region_of_interest);
-        Mat img_roi_orig = (*IMG1)(region_of_interest);
+        Mat img_roi_diff = diff(region_of_interest);
 
-        namedWindow("Roi", CV_WINDOW_KEEPRATIO);
-        resizeWindow("Roi", 800, 800);
-        imshow("Roi",img_roi_warped);
-
-        namedWindow("Differenz", CV_WINDOW_KEEPRATIO);
-        resizeWindow("Differenz", 800, 800);
-        imshow("Differenz",diff);
-
-        cout << "PSNR: " << getPSNR(img_roi_warped,img_roi_orig) << endl;
-
-        //namedWindow("Hull", CV_WINDOW_KEEPRATIO);
-        //resizeWindow("Hull", 800, 800);
-        //imshow("Hull",hull_img);
+        cout << getPSNR(img_roi_diff) << endl;
 
 
     }else{
@@ -186,12 +159,11 @@ void testalg(String PATH, int Hessian, int anzahl, bool b)
     Mat img_1 = imread(path);
     Mat img_2 = imread(path);
 
+
     if(b){
         const float scale = 0.6;
         resize(img_1,img_1,cv::Size(0,0),scale,scale);
         resize(img_2,img_2,cv::Size(0,0),scale,scale);
-
-        cout << "IMG gescaled" << endl;
 
     }
 
@@ -207,13 +179,9 @@ void testalg(String PATH, int Hessian, int anzahl, bool b)
     cout << "Keypoints detected" << endl;
 
 
-    //Mat img_keyPts;
-    //drawKeypoints(img_1, keys1,img_keyPts ,Scalar(0,0,255), 4);
-    //namedWindow("Keypoints", CV_WINDOW_KEEPRATIO);
-    //resizeWindow("Keypoints", 800, 800);
-    //imshow("Keypoints",img_keyPts);
-    //waitKey(0);
 
+    Mat img_keyPts;
+    drawKeypoints(img_1, keys1,img_keyPts ,Scalar(0,0,255), 4);
 
     FlannBasedMatcher matcher;
     vector<vector<DMatch>> matches;
@@ -257,11 +225,13 @@ void testalg(String PATH, int Hessian, int anzahl, bool b)
 
     cout << "Matches gefiltered" << endl;
 
+
     Mat img_trans = Mat::zeros(img_1.size(),img_1.type());
     vector<vector<DMatch>> split;
     vector<DMatch> empty;
     split.push_back(empty);
     split.push_back(filtered_matches);
+    Mat img_matches_1;
 
 
     cout << "Homographien" << endl;
@@ -270,17 +240,6 @@ void testalg(String PATH, int Hessian, int anzahl, bool b)
         Mat img_matches;
         Mat img_matches2;
         split = Homography(split[1],keys1,&img_1, &img_2);
-        drawMatches(img_1,keys1,img_2,keys2,split[0],img_matches);
-        namedWindow("Matches", CV_WINDOW_KEEPRATIO);
-        resizeWindow("Matches", 800, 800);
-        imshow("Matches",img_matches);
-        waitKey(0);
-
-        drawMatches(img_1,keys1,img_2,keys2,split[1],img_matches2);
-        namedWindow("Rest", CV_WINDOW_KEEPRATIO);
-        resizeWindow("Rest", 800, 800);
-        imshow("Rest",img_matches2);
-        waitKey(0);
     }while(split[1].begin()!=split[1].end()&&split[1].size()>4);
 
     waitKey(0);
